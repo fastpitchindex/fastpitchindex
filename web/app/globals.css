@@ -1,26 +1,324 @@
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Leaflet map styles */
+.map-container {
+  z-index: 0;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.map-container .leaflet-container {
+  font-family: var(--font-body);
+}
+
+@theme {
+  --color-coral: hsl(12 76% 61%);
+  --color-coral-dark: hsl(12 76% 51%);
+  --color-navy: hsl(222 47% 18%);
+  --color-navy-light: hsl(222 47% 28%);
+  --color-background: hsl(210 20% 98%);
+  --color-foreground: hsl(222 47% 11%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222 47% 11%);
+  --color-primary: hsl(222 47% 18%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-secondary: hsl(12 76% 61%);
+  --color-secondary-foreground: hsl(0 0% 100%);
+  --color-muted: hsl(210 20% 94%);
+  --color-muted-foreground: hsl(215 16% 47%);
+  --color-accent: hsl(45 93% 47%);
+  --color-accent-foreground: hsl(222 47% 11%);
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-border: hsl(214 32% 91%);
+  --color-input: hsl(214 32% 91%);
+  --color-ring: hsl(12 76% 61%);
+  
+  --font-display: "Bebas Neue", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  
+  --radius: 0.75rem;
+  
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-coral-glow: 0 10px 40px -10px rgba(242, 97, 68, 0.4);
+  --shadow-soft: 0 4px 20px -4px rgba(28, 28, 28, 0.08);
+}
+
+:root {
+  /* Colors - using HSL format for Tailwind compatibility */
+  --background: 210 20% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 222 47% 18%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 12 76% 61%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 210 20% 94%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 45 93% 47%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 12 76% 61%;
+  --radius: 0.75rem;
+  
+  /* Brand colors - hex values (used directly, not HSL) */
+  --coral: #f26144;
+  --coral-dark: #e55a3a;
+  --navy: #1e293b;
+  --navy-light: #334155;
+  
+  /* Gradients */
+  --gradient-hero: linear-gradient(135deg, #1e293b 0%, #334155 50%, #f26144 100%);
+  --gradient-card: linear-gradient(180deg, #ffffff 0%, #f7f8fa 100%);
+  --gradient-coral: linear-gradient(135deg, #f26144 0%, #e55a3a 100%);
+  --gradient-navy: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  
+  /* Shadows */
+  --shadow-soft: 0 4px 20px -4px rgba(28, 28, 28, 0.08);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-coral-glow: 0 10px 40px -10px rgba(242, 97, 68, 0.4);
+  
+  /* Fonts */
+  --font-display: "Bebas Neue", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 222 47% 8%;
+    --foreground: 210 20% 98%;
+    --card: 222 47% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 222 47% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 12 76% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 47% 25%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 222 47% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 222 47% 20%;
+    --input: 222 47% 20%;
+    --ring: 12 76% 61%;
+    --gradient-hero: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #7c2d12 100%);
+    --gradient-card: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* Utility classes */
+.gradient-hero {
+  background: var(--gradient-hero);
+}
+
+@media (max-width: 768px) {
+  .gradient-hero {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 45%, #f26144 85%, #f26144 100%);
+  }
+}
+
+.gradient-coral {
+  background: var(--gradient-coral);
+}
+
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+.shadow-coral-glow {
+  box-shadow: var(--shadow-coral-glow);
+}
+
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated);
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 1rem;
+  padding-left: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+
+/* Results row styles */
+.results-row-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.results-row-date-month {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  line-height: 1;
+}
+
+.results-row-date-day {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  line-height: 1.2;
+  margin-top: 0.125rem;
+}
+
+.results-row-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+
+.results-row-title-extra {
+  color: hsl(var(--muted-foreground));
+  font-weight: 400;
+}
+
+.results-row-meta {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.4;
+}
+
+.results-row-right {
+  text-align: right;
+}
+
+.results-row-gg {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 0.125rem;
+}
+
+.results-row-price {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.results-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.results-weekend-header {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--muted) / 0.3);
 }

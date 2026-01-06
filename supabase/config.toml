@@ -8,6 +8,9 @@ project_id = "fastpitch-index"
 enabled = true
 # Port to use for the API URL.
 port = 54321
+# Bind to all network interfaces (0.0.0.0) to allow access from mobile devices on the same network
+# By default, Supabase binds to localhost only
+# Note: This may require restarting Supabase
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
 schemas = ["public", "graphql_public"]

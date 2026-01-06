@@ -1,0 +1,22 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.cursor/
+
+# Node
+**/node_modules/
+**/.next/
+**/dist/
+**/.turbo/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Supabase local
+.supabase/

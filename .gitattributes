@@ -1,0 +1,53 @@
+﻿# =========================================================
+# Fastpitch Index - Defensive .gitattributes
+# Normalize line endings to LF in-repo
+# =========================================================
+
+# Default: treat as text and normalize to LF
+* text=auto eol=lf
+
+# Explicit text formats
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.js     text eol=lf
+*.jsx    text eol=lf
+*.mjs    text eol=lf
+*.cjs    text eol=lf
+*.json   text eol=lf
+*.css    text eol=lf
+*.scss   text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+*.sql    text eol=lf
+*.txt    text eol=lf
+*.html   text eol=lf
+*.xml    text eol=lf
+*.svg    text eol=lf
+
+# Shell/scripts (OK as LF even on Windows)
+*.ps1    text eol=lf
+*.psm1   text eol=lf
+*.psd1   text eol=lf
+*.sh     text eol=lf
+
+# Windows batch/cmd sometimes prefer CRLF; keep as CRLF if you use them
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# Binary files (never modify line endings)
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.7z     binary
+*.rar    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary

@@ -1,22 +1,84 @@
-# OS / Editor
+﻿# =========================================================
+# Fastpitch Index - Defensive .gitignore (root)
+# =========================================================
+
+# --- OS / Editor ---
 .DS_Store
 Thumbs.db
+Desktop.ini
+
 .vscode/
-.cursor/
+.idea/
+*.swp
 
-# Node
-**/node_modules/
-**/.next/
-**/dist/
-**/.turbo/
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Env
+# --- Env / Secrets (NEVER COMMIT) ---
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
 
-# Logs
-*.log
+# --- Node / Next.js build outputs (root + web/) ---
+node_modules/
+**/node_modules/
 
-# Supabase local
-.supabase/
+.next/
+**/.next/
+
+out/
+**/out/
+
+dist/
+**/dist/
+
+build/
+**/build/
+
+# Next.js / Vite caches
+.turbo/
+**/.turbo/
+
+.cache/
+**/.cache/
+
+# --- Coverage / Test artifacts ---
+coverage/
+**/coverage/
+
+# --- TypeScript build info ---
+*.tsbuildinfo
+
+# --- Supabase local/dev artifacts (avoid committing machine-specific state) ---
+supabase/.temp/
+supabase/.branches/
+supabase/.snapshots/
+supabase/.trash/
+supabase/logs/
+supabase/.env
+supabase/.env.*
+
+# If you use a local dump directory, keep it ignored
+supabase/dumps/
+supabase/backups/
+
+# --- Local tooling / scratch ---
+tmp/
+temp/
+.local/
+scratch/
+**/*.local.*
+
+# --- Large binary/source exports (optional; adjust if you intentionally track them) ---
+*.zip
+*.7z
+*.rar

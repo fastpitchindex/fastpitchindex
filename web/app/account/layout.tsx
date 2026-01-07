@@ -1,22 +1,36 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Layout from "@/components/Layout";
 import Container from "@/components/Container";
+import { useAuth } from "@/lib/auth";
 
-const navItems = [
-  { href: "/account", label: "Dashboard" },
-  { href: "/account/profile", label: "Profile" },
-  { href: "/account/billing", label: "Billing" },
-  { href: "/account/alerts", label: "Alerts" },
+const allNavItems = [
+  { href: "/account", label: "Dashboard", proOnly: true },
+  { href: "/account/profile", label: "Profile", proOnly: false },
+  { href: "/account/billing", label: "Billing", proOnly: false },
+  { href: "/account/alerts", label: "Alerts", proOnly: true },
 ];
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { isPro, isProLoading } = useAuth();
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const navItems = useMemo(() => {
+    if (isProLoading) return [];
+    return allNavItems.filter((item) => !item.proOnly || isPro);
+  }, [isPro, isProLoading]);
+
+  const isActive = (href: string) => {
+    if (href === "/account") {
+      // Dashboard should only be active when exactly on /account
+      return pathname === "/account";
+    }
+    // Other items should be active when pathname matches or starts with the href
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <Layout>

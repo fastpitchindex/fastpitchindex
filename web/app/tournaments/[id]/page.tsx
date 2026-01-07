@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout";
 import Container from "@/components/Container";
 import Card from "@/components/Card";
@@ -25,9 +26,13 @@ import {
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
+  const searchParams = useSearchParams();
   const [event, setEvent] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Check if this is a shared tournament link
+  const isShared = searchParams.get('shared') === 'true' || searchParams.get('share') === 'true';
 
   useEffect(() => {
     let cancelled = false;
@@ -96,53 +101,95 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const levels = event.division_levels || [];
 
   const shareTournament = async () => {
-    if (navigator.share) {
-      await navigator.share({
-        title: event.event_name,
-        text: `Check out ${event.event_name} on Fastpitch Index`,
-        url: window.location.href,
+    try {
+      // Use window.location.origin to ensure we get the correct hostname/IP
+      const origin = window.location.origin;
+      
+      // Create a short URL
+      const response = await fetch('/api/shorten', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Pass the origin in a header so the server can use it
+          'X-Requested-Origin': origin,
+        },
+        body: JSON.stringify({ tournamentId: event.event_id }),
       });
-      return;
+
+      let shareUrl: string;
+      if (response.ok) {
+        const data = await response.json();
+        shareUrl = data.shortUrl;
+        
+        // If the server returned a URL with 0.0.0.0, replace it with the actual origin
+        if (shareUrl.includes('0.0.0.0')) {
+          shareUrl = shareUrl.replace(/https?:\/\/0\.0\.0\.0:\d+/, origin);
+        }
+      } else {
+        // Fallback to full URL if short URL creation fails
+        shareUrl = `${origin}/tournaments/${event.event_id}?shared=true`;
+      }
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: event.event_name,
+          text: `Check out ${event.event_name} on Fastpitch Index`,
+          url: shareUrl,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+    } catch (err) {
+      console.error('Error creating short URL:', err);
+      // Fallback to full URL
+      const fallbackUrl = `${window.location.origin}/tournaments/${event.event_id}?shared=true`;
+      if (navigator.share) {
+        await navigator.share({
+          title: event.event_name,
+          text: `Check out ${event.event_name} on Fastpitch Index`,
+          url: fallbackUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(fallbackUrl);
+      }
     }
-    await navigator.clipboard.writeText(window.location.href);
   };
 
   return (
     <Layout>
       <section
-        className="gradient-hero pt-8 md:pt-10"
-        style={{ paddingBottom: "2.5rem" }}
+        className="gradient-hero pt-4 md:pt-6 pb-4 md:pb-6"
       >
         <Container>
           <Link
             href="/tournaments"
-            className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
+            className="inline-flex items-center justify-center bg-coral text-white hover:bg-coral-dark transition-colors rounded-md w-6 h-6 mb-3"
+            aria-label="Back to Results"
           >
-            <LuArrowLeft className="w-4 h-4" />
-            Back to Results
+            <LuArrowLeft className="w-3 h-3 stroke-[3]" />
           </Link>
-          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-white mb-6 max-w-4xl">
+          <h1 className="font-display text-3xl md:text-4xl lg:text-5xl text-white mb-3 max-w-4xl">
             {event.event_name}
           </h1>
-          <div className="flex flex-wrap gap-6 text-white/80">
+          <div className="flex flex-wrap gap-4 md:gap-6 text-white/80 text-base md:text-lg">
             <div className="flex items-center gap-2">
-              <LuCalendarDays className="w-5 h-5 text-coral" />
+              <LuCalendarDays className="w-4 h-4 md:w-5 md:h-5 text-coral" />
               <span>{formatDateRange(event.start_date, event.end_date)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <LuMapPin className="w-5 h-5" />
+              <LuMapPin className="w-4 h-4 md:w-5 md:h-5" />
               <span>{locationLabel}</span>
             </div>
           </div>
           {event.org_name && (
-            <div className="flex flex-wrap items-center gap-3 mt-6">
+            <div className="flex flex-wrap items-center gap-3 mt-3">
               <Badge variant="org">{event.org_name}</Badge>
             </div>
           )}
         </Container>
       </section>
 
-      <section className="py-3 md:py-4 -mt-10">
+      <section className="py-6 md:py-8">
         <Container>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
@@ -162,14 +209,14 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       {(() => {
                         const hasGateFee = event.division_rows?.some((division) => division.gate_fee !== null && division.gate_fee !== undefined);
                         return (
-                          <table className="w-full text-left border border-border/70 rounded-lg overflow-hidden text-[12px] table-fixed">
+                          <table className="w-full text-left border border-border/70 rounded-lg overflow-hidden text-sm table-fixed">
                             <colgroup>
                               <col className={hasGateFee ? "w-2/5" : "w-1/2"} />
                               <col className={hasGateFee ? "w-1/5" : "w-1/4"} />
                               {hasGateFee ? <col className="w-1/5" /> : null}
                               <col className={hasGateFee ? "w-1/5" : "w-1/4"} />
                             </colgroup>
-                            <thead className="bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border/70">
+                            <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground border-b border-border/70">
                               <tr>
                                 <th className="px-2 py-2 font-semibold whitespace-nowrap">Division</th>
                                 <th className="px-2 py-2 font-semibold whitespace-nowrap">Entry</th>

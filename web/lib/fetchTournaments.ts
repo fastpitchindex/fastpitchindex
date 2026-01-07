@@ -26,7 +26,18 @@ async function fetchFromSupabase(endpoint: string, params: Record<string, string
     },
   });
   
+  // Handle 404 (not found) gracefully - return empty array instead of throwing
+  if (response.status === 404) {
+    return [];
+  }
+  
+  // Handle other errors
   if (!response.ok) {
+    // Don't throw errors for client errors (4xx) that aren't auth-related
+    // These are expected for invalid IDs
+    if (response.status >= 400 && response.status < 500 && response.status !== 401 && response.status !== 403) {
+      return [];
+    }
     const errorText = await response.text();
     throw new Error(`Supabase request failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
@@ -188,44 +199,92 @@ export async function fetchTournaments(options: { isPro?: boolean } = {}): Promi
     // Build query parameters for direct fetch using PostgREST syntax
     const selectFields = 'event_fingerprint,name,start_date,end_date,city,state,latitude,longitude,season_year,season_name,event_url,site_slug,updated_at';
     
-    // Build URL with proper PostgREST syntax for date range
-    let url = `${getSupabaseUrl()}/rest/v1/events?select=${selectFields}&order=start_date.asc`;
+    // For free users, we need to fetch both visible events (within 45 days) and hidden events (beyond 45 days)
+    // For pro users, fetch all events
+    let visibleEventsData: DbEventRow[] = [];
+    let hiddenEventsData: DbEventRow[] = [];
     
-    // Apply date filter for free users - PostgREST uses separate query params
     if (!options.isPro) {
+      // Fetch visible events (within 45-day window)
       const startDateStr = freeStart.toISOString().split("T")[0];
       const endDateStr = freeCutoff.toISOString().split("T")[0];
-      // PostgREST range: use separate query params with & separator
-      url += `&start_date=gte.${startDateStr}&start_date=lte.${endDateStr}`;
-    }
-
-    // Fetch events using direct fetch
-    let eventsData: DbEventRow[];
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const visibleUrl = `${getSupabaseUrl()}/rest/v1/events?select=${selectFields}&start_date=gte.${startDateStr}&start_date=lte.${endDateStr}&order=start_date.asc`;
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Supabase request failed: ${response.status} ${response.statusText} - ${errorText}`);
+      // Fetch hidden events (beyond 45-day window) - just need count, so we can use a simpler query
+      const hiddenUrl = `${getSupabaseUrl()}/rest/v1/events?select=${selectFields}&start_date=gt.${endDateStr}&order=start_date.asc`;
+      
+      try {
+        // Fetch visible events
+        const visibleResponse = await fetch(visibleUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!visibleResponse.ok) {
+          const errorText = await visibleResponse.text();
+          throw new Error(`Supabase request failed: ${visibleResponse.status} ${visibleResponse.statusText} - ${errorText}`);
+        }
+        
+        visibleEventsData = await visibleResponse.json();
+        
+        // Fetch hidden events (for count)
+        const hiddenResponse = await fetch(hiddenUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (hiddenResponse.ok) {
+          hiddenEventsData = await hiddenResponse.json();
+        }
+      } catch (fetchError) {
+        const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+        console.error("Supabase fetch error:", errorMsg);
+        return {
+          items: [],
+          hiddenItems: [],
+          error: errorMsg,
+        };
       }
+    } else {
+      // Pro users: fetch all events
+      const allUrl = `${getSupabaseUrl()}/rest/v1/events?select=${selectFields}&order=start_date.asc`;
       
-      eventsData = await response.json();
-    } catch (fetchError) {
-      const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      console.error("Supabase fetch error:", errorMsg);
-      return {
-        items: [],
-        hiddenItems: [],
-        error: errorMsg,
-      };
+      try {
+        const response = await fetch(allUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Supabase request failed: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+        
+        visibleEventsData = await response.json();
+      } catch (fetchError) {
+        const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+        console.error("Supabase fetch error:", errorMsg);
+        return {
+          items: [],
+          hiddenItems: [],
+          error: errorMsg,
+        };
+      }
     }
+    
+    const eventsData = visibleEventsData;
 
     if (!eventsData || !Array.isArray(eventsData)) {
       console.log("No events data returned from query");
@@ -235,8 +294,11 @@ export async function fetchTournaments(options: { isPro?: boolean } = {}): Promi
     // Fetch divisions separately to avoid nested select issues
     let divisionsByEvent = new Map<string, DivisionRow[]>();
     
-    if (eventsData.length > 0) {
-      const eventFingerprints = eventsData.map(e => e.event_fingerprint);
+    // Combine visible and hidden events for division fetching
+    const allEventsForDivisions = [...eventsData, ...hiddenEventsData];
+    
+    if (allEventsForDivisions.length > 0) {
+      const eventFingerprints = allEventsForDivisions.map(e => e.event_fingerprint);
       
       // Fetch divisions using direct fetch - PostgREST 'in' syntax
       try {
@@ -262,19 +324,20 @@ export async function fetchTournaments(options: { isPro?: boolean } = {}): Promi
       }
     }
 
-    // Map database rows to EventRow format, attaching divisions
-    const allEvents = eventsData.map((row) => {
+    // Map visible events to EventRow format
+    const visibleEvents = eventsData.map((row) => {
       const divisions = divisionsByEvent.get(row.event_fingerprint) || [];
       return mapDbEvent({ ...row, event_divisions: divisions } as DbEventRow);
     });
     
-    // Since we're already filtering at the database level for free users,
-    // all returned events are visible to the user
-    const freeEvents = allEvents;
-    const hiddenEvents: EventRow[] = [];
-
+    // Map hidden events to EventRow format (for count)
+    const hiddenEvents = hiddenEventsData.map((row) => {
+      const divisions = divisionsByEvent.get(row.event_fingerprint) || [];
+      return mapDbEvent({ ...row, event_divisions: divisions } as DbEventRow);
+    });
+    
     return {
-      items: freeEvents,
+      items: visibleEvents,
       hiddenItems: options.isPro ? [] : hiddenEvents,
       error: null,
     };
@@ -313,7 +376,8 @@ export async function fetchTournamentById(eventId: string): Promise<{
   error: string | null;
 }> {
   try {
-    // Fetch event using direct fetch
+    // Fetch event by ID - this bypasses date restrictions to allow shared tournament links
+    // Anyone with the direct link can view the tournament details, even if outside the free tier window
     const params: Record<string, string> = {
       select: 'event_fingerprint,name,start_date,end_date,city,state,latitude,longitude,season_year,season_name,event_url,site_slug,updated_at',
       event_fingerprint: `eq.${eventId}`,

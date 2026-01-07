@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Bebas_Neue } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth";
 
 const inter = Inter({
   variable: "--font-body",
@@ -18,11 +19,13 @@ const bebasNeue = Bebas_Neue({
 export const metadata: Metadata = {
   title: "Fastpitch Index - Find Your Next Tournament",
   description: "Your trusted source for Michigan travel softball tournaments. We aggregate listings from across the state so coaches and parents can plan seasons without the hassle.",
-  icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
-  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -81,7 +84,9 @@ export default function RootLayout({
             `,
           }}
         />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,23 +2,38 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 import Container from "@/components/Container";
 import PageHeader from "@/components/PageHeader";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import { useAuth } from "@/lib/auth";
+import { sanitizePassword, sanitizeEmail } from "@/lib/utils";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { signIn } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    // TODO: Implement Supabase authentication
+    
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedPassword = sanitizePassword(password);
+    
+    const { error: signInError } = await signIn(sanitizedEmail, sanitizedPassword);
+    
+    if (signInError) {
+      setError(signInError.message || "Failed to log in. Please check your email and password.");
+    }
+    
     setLoading(false);
   };
 
@@ -45,6 +60,7 @@ export default function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
             required
             autoComplete="current-password"
+            maxLength={128}
           />
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

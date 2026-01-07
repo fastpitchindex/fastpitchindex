@@ -10,7 +10,8 @@ import Select from "@/components/Select";
 import EmptyState from "@/components/EmptyState";
 import Link from "next/link";
 import { fetchTournaments, EventRow, fetchZipCodeCoordinates } from "@/lib/fetchTournaments";
-import { getDivisionLabel } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { getDivisionLabel, sanitizeText } from "@/lib/utils";
 import {
   formatDateRange,
   sortDivisions,
@@ -39,6 +40,7 @@ import {
   LuX 
 } from "react-icons/lu";
 import EventMap from "@/components/EventMap";
+import UpgradeCard from "@/components/UpgradeCard";
 
 type Filters = {
   search: string;
@@ -134,10 +136,9 @@ export default function TournamentsPage() {
   const [page, setPage] = useState(1);
   const [zipCoords, setZipCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [weekendMonth, setWeekendMonth] = useState(() => new Date());
+  const [mapKey, setMapKey] = useState(0); // Key to force EventMap remount when clearing filters
 
-  // TODO: Replace with actual auth check when authentication is implemented
-  // Temporarily set to true for testing
-  const isPro = true;
+  const { isPro, isProLoading } = useAuth();
 
   // Fetch tournaments on mount
   useEffect(() => {
@@ -478,6 +479,10 @@ export default function TournamentsPage() {
     setPage(1);
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("fastpitch-search");
+      // Clear map selection when clearing filters
+      sessionStorage.removeItem("returnToId");
+      // Force EventMap to remount and clear selection
+      setMapKey((prev) => prev + 1);
     }
   };
 
@@ -578,9 +583,11 @@ export default function TournamentsPage() {
       if (parsed.searchApplied) {
         setSearchApplied(true);
       }
-      if (parsed.viewMode) {
-        setViewMode(parsed.viewMode);
-      } else if (parsed.searchApplied) {
+      // Default to list view unless user explicitly selected map
+      if (parsed.viewMode === "map") {
+        setViewMode("map");
+      } else {
+        // Always default to list if not explicitly map
         setViewMode("list");
       }
     } catch {
@@ -803,7 +810,10 @@ export default function TournamentsPage() {
                               inputMode="numeric"
                               placeholder="Zip code"
                               value={filters.zip}
-                              onChange={(event) => setFilters((current) => ({ ...current, zip: event.target.value }))}
+                              onChange={(event) => {
+                                const sanitized = sanitizeText(event.target.value, 10);
+                                setFilters((current) => ({ ...current, zip: sanitized }));
+                              }}
                               className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                             />
                             <select
@@ -905,15 +915,27 @@ export default function TournamentsPage() {
               <p className="text-muted-foreground text-sm mt-1">{fetchError}</p>
             </div>
           ) : visibleEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 bg-muted/50 rounded-xl">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <span className="text-3xl">?</span>
+            <>
+              <div className="flex flex-col items-center justify-center py-10 bg-muted/50 rounded-xl">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <span className="text-3xl">?</span>
+                </div>
+                <p className="text-foreground font-medium text-lg">No tournaments found</p>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Try adjusting your filters to find more results
+                </p>
               </div>
-              <p className="text-foreground font-medium text-lg">No tournaments found</p>
-              <p className="text-muted-foreground text-sm mt-1">
-                Try adjusting your filters to find more results
-              </p>
-            </div>
+              {(() => {
+                const shouldShow = !isPro && !isProLoading && hiddenEvents.length > 0;
+                console.log('UpgradeCard condition check (no visible events):', {
+                  isPro,
+                  isProLoading,
+                  hiddenCount: hiddenEvents.length,
+                  shouldShow,
+                });
+                return shouldShow ? <UpgradeCard hiddenCount={hiddenEvents.length} /> : null;
+              })()}
+            </>
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -943,7 +965,7 @@ export default function TournamentsPage() {
               </div>
               {viewMode === "map" ? (
                 <div className="border border-border rounded-2xl bg-card overflow-hidden md:mx-1">
-                  <EventMap events={pagedEvents} />
+                  <EventMap key={mapKey} events={pagedEvents} />
                 </div>
               ) : sortMode === "distance" ? (
                 <div className="border border-border rounded-2xl bg-card overflow-hidden md:mx-1">
@@ -967,6 +989,24 @@ export default function TournamentsPage() {
                   ))}
                 </div>
               )}
+              {(() => {
+                // Only show upgrade card after pagination (if pagination exists)
+                // If no pagination (totalPages === 1), show immediately
+                const hasPagination = totalPages > 1;
+                const hasReachedLastPage = currentPage >= totalPages;
+                const shouldShow = !isPro && !isProLoading && hiddenEvents.length > 0 && (!hasPagination || hasReachedLastPage);
+                console.log('UpgradeCard condition check:', {
+                  isPro,
+                  isProLoading,
+                  hiddenCount: hiddenEvents.length,
+                  hasPagination,
+                  currentPage,
+                  totalPages,
+                  hasReachedLastPage,
+                  shouldShow,
+                });
+                return shouldShow ? <UpgradeCard hiddenCount={hiddenEvents.length} /> : null;
+              })()}
               {totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
                   <button
@@ -1121,7 +1161,10 @@ export default function TournamentsPage() {
                 type="text"
                 placeholder="Search tournaments..."
                 value={filters.search}
-                onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+                onChange={(event) => {
+                  const sanitized = sanitizeText(event.target.value, 200);
+                  setFilters((current) => ({ ...current, search: sanitized }));
+                }}
                 className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               />
               <select

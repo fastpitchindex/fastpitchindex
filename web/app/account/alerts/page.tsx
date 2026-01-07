@@ -1,8 +1,11 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import { useAuth } from "@/lib/auth";
+import { sanitizeText } from "@/lib/utils";
 // TODO: Import supabase client when auth is implemented
 // import { supabaseClient } from "@/lib/supabaseClient";
 
@@ -50,12 +53,20 @@ function formatCriteria(criteria: Record<string, unknown> | null) {
 }
 
 export default function AlertsPage() {
+  const { isPro, isProLoading } = useAuth();
+  const router = useRouter();
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
   const [form, setForm] = useState<AlertFormState>(initialForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isProLoading && !isPro) {
+      router.push("/account/profile");
+    }
+  }, [isPro, isProLoading, router]);
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -74,8 +85,10 @@ export default function AlertsPage() {
   };
 
   useEffect(() => {
-    loadAlerts();
-  }, []);
+    if (isPro && !isProLoading) {
+      loadAlerts();
+    }
+  }, [isPro, isProLoading]);
 
   const handleChange = (field: keyof AlertFormState) => (event: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -87,16 +100,21 @@ export default function AlertsPage() {
     setError(null);
     setMessage(null);
 
+    // Sanitize all inputs
+    const sanitizedName = sanitizeText(form.name, 200);
+    const sanitizedQuery = form.query ? sanitizeText(form.query, 500) : "";
+    const sanitizedState = form.state ? sanitizeText(form.state, 2) : "";
+
     const criteria: Record<string, string> = {};
-    if (form.query) criteria.query = form.query;
-    if (form.state) criteria.state = form.state;
-    if (form.date_from) criteria.date_from = form.date_from;
-    if (form.date_to) criteria.date_to = form.date_to;
+    if (sanitizedQuery) criteria.query = sanitizedQuery;
+    if (sanitizedState) criteria.state = sanitizedState;
+    if (form.date_from) criteria.date_from = form.date_from; // Date inputs are already validated by HTML5
+    if (form.date_to) criteria.date_to = form.date_to; // Date inputs are already validated by HTML5
 
     // TODO: Create alert in Supabase
     // const { error: createError } = await supabaseClient.from("alerts").insert({
     //   user_id: user.id,
-    //   name: form.name,
+    //   name: sanitizedName,
     //   criteria,
     //   frequency: "daily",
     //   is_active: true,

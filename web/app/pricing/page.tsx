@@ -5,15 +5,14 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout";
 import Container from "@/components/Container";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 
 const freeCtaHref = "/";
 
 export default function PricingPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
-  // TODO: Replace with actual auth check when authentication is implemented
-  const user = null;
+  const { user } = useAuth();
   const proCtaHref = user ? "/account/billing" : "/login";
 
   useEffect(() => {

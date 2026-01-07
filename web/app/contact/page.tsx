@@ -9,6 +9,7 @@ import PageHeader from "@/components/PageHeader";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
+import { sanitizeEmail, sanitizeText, sanitizeUrl, sanitizeTextarea, validateFiles } from "@/lib/utils";
 
 export default function ContactPage() {
   const searchParams = useSearchParams();
@@ -100,8 +101,62 @@ export default function ContactPage() {
       const form = event.currentTarget;
       const data = new FormData(form);
       
+      // Validate file uploads if any
+      const fileInputs = form.querySelectorAll<HTMLInputElement>('input[type="file"]');
+      for (const fileInput of fileInputs) {
+        if (fileInput.files && fileInput.files.length > 0) {
+          const validation = validateFiles(fileInput.files);
+          if (!validation.isValid) {
+            setFormStatus(`File upload error: ${validation.errors.join(' ')}`);
+            return;
+          }
+          // Remove invalid files from FormData and keep only valid ones
+          // Note: FormData already contains the files, but we've validated them
+          // If validation fails, we return early above
+        }
+      }
+      
+      // Sanitize all form inputs
+      const name = sanitizeText(data.get("name") as string || "", 200);
+      const email = sanitizeEmail(data.get("email") as string || "");
+      const inquiryType = sanitizeText(data.get("inquiry_type") as string || "Contact", 100);
+      
+      // Sanitize listing correction fields
+      const listingUrl = data.get("listing_url") ? sanitizeUrl(data.get("listing_url") as string) : null;
+      const listingCategory = data.get("listing_category") ? sanitizeText(data.get("listing_category") as string || "", 100) : null;
+      const proposedCorrection = data.get("proposed_correction") ? sanitizeTextarea(data.get("proposed_correction") as string) : null;
+      
+      // Sanitize tournament submission fields
+      const tournamentName = data.get("tournament_name") ? sanitizeText(data.get("tournament_name") as string || "", 200) : null;
+      const tournamentUrl = data.get("tournament_url") ? sanitizeUrl(data.get("tournament_url") as string) : null;
+      const city = data.get("city") ? sanitizeText(data.get("city") as string || "", 100) : null;
+      const state = data.get("state") ? sanitizeText(data.get("state") as string || "", 2) : null;
+      const divisions = data.get("divisions") ? sanitizeText(data.get("divisions") as string || "", 200) : null;
+      const organizer = data.get("organizer") ? sanitizeText(data.get("organizer") as string || "", 200) : null;
+      
+      // Sanitize support category
+      const supportCategory = data.get("support_category") ? sanitizeText(data.get("support_category") as string || "", 100) : null;
+      
+      // Sanitize message
+      const message = sanitizeTextarea(data.get("message") as string || "");
+      
+      // Update form data with sanitized values
+      data.set("name", name);
+      data.set("email", email);
+      data.set("inquiry_type", inquiryType);
+      if (listingUrl) data.set("listing_url", listingUrl);
+      if (listingCategory) data.set("listing_category", listingCategory);
+      if (proposedCorrection) data.set("proposed_correction", proposedCorrection);
+      if (tournamentName) data.set("tournament_name", tournamentName);
+      if (tournamentUrl) data.set("tournament_url", tournamentUrl);
+      if (city) data.set("city", city);
+      if (state) data.set("state", state);
+      if (divisions) data.set("divisions", divisions);
+      if (organizer) data.set("organizer", organizer);
+      if (supportCategory) data.set("support_category", supportCategory);
+      data.set("message", message);
+      
       // Generate subject from inquiry type and date
-      const inquiryType = data.get("inquiry_type") as string || "Contact";
       const submissionDate = new Date().toLocaleDateString("en-US", { 
         month: "short", 
         day: "numeric", 
@@ -114,9 +169,9 @@ export default function ContactPage() {
       
       // Log form data for debugging (remove in production)
       console.log("Submitting form data:", {
-        inquiry_type: data.get("inquiry_type"),
-        name: data.get("name"),
-        email: data.get("email"),
+        inquiry_type: inquiryType,
+        name: name,
+        email: email,
         subject: subject,
       });
 
@@ -289,6 +344,22 @@ export default function ContactPage() {
                 required
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
+            </label>
+
+            <label className="space-y-2 block">
+              <span className="text-sm font-semibold text-foreground">
+                Attachments (optional)
+              </span>
+              <input
+                type="file"
+                name="attachments"
+                multiple
+                accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+              />
+              <p className="text-xs text-muted-foreground">
+                Allowed file types: JPG, PNG, GIF, WEBP, PDF, DOC, DOCX, XLS, XLSX, TXT, CSV. Maximum file size: 10MB per file.
+              </p>
             </label>
 
             <label className="flex items-start gap-2 text-sm text-muted-foreground">

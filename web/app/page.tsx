@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 import Container from "@/components/Container";
 import Link from "next/link";
@@ -27,6 +29,29 @@ const featureCards = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if we have an auth token in the hash fragment (password recovery or email confirmation)
+    // If so, redirect to the appropriate page
+    if (typeof window === 'undefined') return;
+    
+    const hash = window.location.hash.substring(1);
+    if (!hash) return;
+    
+    const hashParams = new URLSearchParams(hash);
+    const type = hashParams.get('type');
+    const accessToken = hashParams.get('access_token');
+    
+    if (type === 'recovery' && accessToken) {
+      // Redirect to reset password page with the hash fragment
+      router.replace(`/reset-password${window.location.hash}`);
+    } else if (type === 'signup' && accessToken) {
+      // Email confirmation - redirect to login page so they can log in
+      router.replace('/login');
+    }
+  }, [router]);
+
   return (
     <Layout>
       <section id="top" className="relative h-screen max-h-[100dvh] flex items-center gradient-hero overflow-hidden">
@@ -45,9 +70,9 @@ export default function HomePage() {
           }}
         />
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center -mt-32 md:-mt-40 lg:-mt-36">
             <h1
-              className="font-display text-5xl sm:text-6xl md:text-6xl lg:text-7xl text-white mb-6 animate-slide-up leading-tight mt-0 md:mt-[-3rem] lg:mt-[-2.5rem]"
+              className="font-display text-5xl sm:text-6xl md:text-6xl lg:text-7xl text-white mb-6 animate-slide-up leading-tight"
             >
               FIND YOUR NEXT
               <br />

@@ -21,7 +21,8 @@ export default function Select({
   const generatedId = useId();
   const selectId = id || generatedId;
   
-  const selectClasses = `flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`;
+  // Use text-base (16px) on mobile to prevent iOS auto-zoom, text-sm on desktop
+  const selectClasses = `flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`;
   
   const selectElement = (
     <select id={selectId} className={selectClasses} {...props}>

@@ -2,31 +2,69 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 import Container from "@/components/Container";
 import PageHeader from "@/components/PageHeader";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import { useAuth } from "@/lib/auth";
+import { sanitizePassword, sanitizeEmail, sanitizeText } from "@/lib/utils";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const { signUp } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
-    // TODO: Implement Supabase signup
-    // const { error: signUpError } = await signUp(email, password);
-    // if (signUpError) {
-    //   setError(signUpError);
-    // } else {
-    //   setMessage("Check your email to confirm your account.");
-    // }
+    
+    // Sanitize all inputs
+    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedPassword = sanitizePassword(password);
+    const sanitizedDisplayName = sanitizeText(displayName, 100);
+    
+    if (!sanitizedDisplayName) {
+      setError("Display name is required.");
+      setLoading(false);
+      return;
+    }
+    
+    if (!sanitizedEmail) {
+      setError("Email is required.");
+      setLoading(false);
+      return;
+    }
+    
+    if (sanitizedPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+    
+    if (sanitizedPassword.length > 128) {
+      setError("Password must be 128 characters or less.");
+      setLoading(false);
+      return;
+    }
+    
+    const { error: signUpError } = await signUp(sanitizedEmail, sanitizedPassword, sanitizedDisplayName);
+    
+    if (signUpError) {
+      setError(signUpError.message || "Failed to create account. Please try again.");
+    } else {
+      setMessage("Account created! Please check your email to confirm your account before logging in.");
+      // Don't auto-redirect - let them read the message
+    }
+    
     setLoading(false);
   };
 
@@ -53,6 +91,20 @@ export default function SignupPage() {
             onChange={(event) => setPassword(event.target.value)}
             required
             autoComplete="new-password"
+            minLength={8}
+            maxLength={128}
+          />
+          <p className="text-xs text-muted-foreground">Password must be 8-128 characters long.</p>
+        </label>
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold">Display Name</span>
+          <Input
+            type="text"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            required
+            autoComplete="name"
+            placeholder="Enter your display name"
           />
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

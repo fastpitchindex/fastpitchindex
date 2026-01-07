@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
+import { sanitizeText, sanitizeTextarea } from "@/lib/utils";
 // TODO: Import supabase client
 // import { supabaseClient } from "@/lib/supabaseClient";
 
@@ -92,7 +93,13 @@ export default function AdminSourcesPage() {
     event.preventDefault();
     if (paramsError) return;
     setSaving(true);
+    
+    // Sanitize inputs
+    const sanitizedName = sanitizeText(formState.name, 200);
+    const sanitizedParams = sanitizeTextarea(formState.params, 5000);
+    
     // TODO: Create source in Supabase
+    // Use sanitizedName and sanitizedParams instead of formState.name and formState.params
     setFormState(emptyForm);
     setShowNew(false);
     await loadSources();

@@ -3,7 +3,9 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { FaUserCircle } from "react-icons/fa";
 
 type LayoutProps = {
   children: ReactNode;
@@ -25,12 +27,6 @@ const LuX = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
-const LuUser = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-    <circle cx="12" cy="7" r="4"></circle>
-  </svg>
-);
 
 export default function Layout({ children }: LayoutProps) {
   const [navOpen, setNavOpen] = useState(false);
@@ -38,6 +34,7 @@ export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement | null>(null);
   const accountRef = useRef<HTMLDivElement | null>(null);
+  const navRef = useRef<HTMLDivElement | null>(null);
 
   // Close menus when route changes
   useEffect(() => {
@@ -53,7 +50,7 @@ export default function Layout({ children }: LayoutProps) {
       const target = event.target as Node | null;
       if (!target) return;
       
-      if (navOpen && headerRef.current && !headerRef.current.contains(target)) {
+      if (navOpen && navRef.current && !navRef.current.contains(target)) {
         setNavOpen(false);
       }
       
@@ -70,10 +67,8 @@ export default function Layout({ children }: LayoutProps) {
     };
   }, [navOpen, accountOpen]);
 
-  // TODO: Replace with actual auth check when authentication is implemented
-  const user = null;
-  const isPro = false;
-  const isProLoading = false;
+  const { user, isPro, isProLoading, signOut } = useAuth();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-body">
@@ -104,13 +99,13 @@ export default function Layout({ children }: LayoutProps) {
               {user ? (
                 <div className="relative inline-flex items-center gap-2" ref={accountRef}>
                   <button
-                    className="inline-flex items-center justify-center h-8 w-8 text-foreground hover:text-secondary transition-colors"
+                    className="inline-flex items-center justify-center h-6 text-coral hover:text-coral-dark transition-colors"
                     onClick={() => setAccountOpen((open) => !open)}
                     aria-haspopup="menu"
                     aria-expanded={accountOpen}
                     aria-label="Account menu"
                   >
-                    <LuUser size={18} />
+                    <FaUserCircle size={24} />
                   </button>
                   {!isProLoading && isPro && (
                     <button
@@ -145,10 +140,12 @@ export default function Layout({ children }: LayoutProps) {
                       </Link>
                       <button
                         className="block w-full text-left px-4 py-2 text-sm hover:bg-muted/30 whitespace-nowrap text-foreground"
-                        onClick={() => {
+                        onClick={async () => {
                           setAccountOpen(false);
-                          // TODO: Implement sign out when auth is ready
-                          window.location.href = "/login";
+                          const { error } = await signOut();
+                          if (error) {
+                            console.error("Sign out failed", error);
+                          }
                         }}
                       >
                         Sign out
@@ -161,52 +158,56 @@ export default function Layout({ children }: LayoutProps) {
                   Log in
                 </Link>
               )}
-              <button
-                type="button"
-                className="h-8 w-8 inline-flex items-center justify-center text-foreground hover:text-secondary transition-colors"
-                onClick={() => setNavOpen((open) => !open)}
-                aria-label="Toggle menu"
-                aria-expanded={navOpen}
-              >
-                {navOpen ? <LuX size={24} /> : <LuMenu size={24} />}
-              </button>
+              <div className="relative" ref={navRef}>
+                <button
+                  type="button"
+                  className="h-8 w-8 inline-flex items-center justify-center text-foreground hover:text-secondary transition-colors"
+                  onClick={() => setNavOpen((open) => !open)}
+                  aria-label="Toggle menu"
+                  aria-expanded={navOpen}
+                  aria-haspopup="menu"
+                >
+                  {navOpen ? <LuX size={24} /> : <LuMenu size={24} />}
+                </button>
+                {navOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-48 rounded-md border border-border shadow-md z-50 overflow-hidden bg-card"
+                    style={{ backgroundColor: "#ffffff", opacity: 1 }}
+                  >
+                    <nav className="flex flex-col">
+                      <Link
+                        className="block px-4 py-2 text-sm hover:bg-muted/30 text-foreground"
+                        href="/tournaments"
+                        onClick={() => setNavOpen(false)}
+                      >
+                        Search
+                      </Link>
+                      <Link
+                        className="block px-4 py-2 text-sm hover:bg-muted/30 text-foreground"
+                        href="/pricing"
+                        onClick={() => setNavOpen(false)}
+                      >
+                        Pricing
+                      </Link>
+                      <Link
+                        className="block px-4 py-2 text-sm hover:bg-muted/30 text-foreground"
+                        href="/about"
+                        onClick={() => setNavOpen(false)}
+                      >
+                        About
+                      </Link>
+                      <Link
+                        className="block px-4 py-2 text-sm hover:bg-muted/30 text-foreground"
+                        href="/contact"
+                        onClick={() => setNavOpen(false)}
+                      >
+                        Contact
+                      </Link>
+                    </nav>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <div
-            className={`py-4 border-t border-border bg-white ${
-              navOpen ? "block" : "hidden"
-            }`}
-          >
-            <nav className="flex flex-col md:flex-row gap-4">
-              <Link
-                className="font-medium py-2 transition-colors text-muted-foreground hover:text-foreground"
-                href="/tournaments"
-                onClick={() => setNavOpen(false)}
-              >
-                Search
-              </Link>
-              <Link
-                className="font-medium py-2 transition-colors text-muted-foreground hover:text-foreground"
-                href="/pricing"
-                onClick={() => setNavOpen(false)}
-              >
-                Pricing
-              </Link>
-              <Link
-                className="font-medium py-2 transition-colors text-muted-foreground hover:text-foreground"
-                href="/about"
-                onClick={() => setNavOpen(false)}
-              >
-                About
-              </Link>
-              <Link
-                className="font-medium py-2 transition-colors text-muted-foreground hover:text-foreground"
-                href="/contact"
-                onClick={() => setNavOpen(false)}
-              >
-                Contact
-              </Link>
-            </nav>
           </div>
         </div>
       </header>

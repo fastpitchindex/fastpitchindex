@@ -11,6 +11,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "@types/leaflet": "^1.9.21",
+    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/redis": "^1.36.0",
     "adm-zip": "^0.5.16",
     "leaflet": "^1.9.4",
     "next": "16.1.1",
@@ -27,7 +29,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
+    "to-ico": "^1.1.5",
     "typescript": "^5"
   }
 }

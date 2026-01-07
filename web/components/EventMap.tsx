@@ -225,6 +225,20 @@ export default function EventMap({ events }: { events: EventRow[] }) {
     }
   }, [mapReady, selectedEventId]);
 
+  // Clear selected location when events change (new search)
+  useEffect(() => {
+    if (!selectedEventId) return;
+    
+    // Check if the currently selected event is still in the events list
+    const selectedEventExists = events.some((event) => event.event_id === selectedEventId);
+    
+    // If the selected event is no longer in the list, clear the selection
+    if (!selectedEventExists) {
+      setSelectedEventId("");
+      sessionStorage.removeItem("returnToId");
+    }
+  }, [events, selectedEventId]);
+
   if (events.length === 0) return <div className="text-muted-foreground p-8 text-center">No events to show on the map.</div>;
   if (markers.length === 0) return <div className="text-muted-foreground p-8 text-center">No map coordinates available.</div>;
   if (!iconsReady || !navyIcon || !coralIcon) return <div className="text-muted-foreground p-8 text-center">Loading map...</div>;
